@@ -3,6 +3,7 @@ program OpenGLApp;
 uses
   Windows,
   Messages,
+  Math,
   OpenGL;
 
 const
@@ -10,8 +11,6 @@ const
   FPS_TIMER = 1;                     // Timer to calculate FPS
   FPS_INTERVAL = 1000;               // Calculate FPS every 1000 ms
 
-  X = 0.525731112119133606;
-  Z = 0.850650808352039932;
   azul: Array[0..3] of GLfloat = (0,0,1,1);
 
 var
@@ -22,8 +21,6 @@ var
   FPSCount : Integer = 0;            // Counter for FPS
   ElapsedTime : Integer;             // Elapsed time between frames
 
-  spin : GLfloat = 0.0;              // Var used for the amount to rotate an object
-
   DrawShaded : boolean = true;
 
   light_ambient : array[0..3] of GLfloat = ( 0.3, 0.3, 0.3, 1.0 );
@@ -31,8 +28,142 @@ var
   light_specular : array[0..3] of GLfloat = ( 1.0, 1.0, 1.0, 1.0 );
   light_position : array[0..3] of GLfloat = ( 5.0, 40.0, -4.0, 2.0 );
 
-
+  deathzone: array [0..3,-5..5,-5..5] of Real;
+  positionX,positionZ,altura:Double;
+  spin:Real;
 {$R *.RES}
+
+procedure Display();
+var x,z,lz,lx:Double;
+    tempX,tempZ:Double;
+    j,k:integer;
+    flagX,flagZ,aux1,aux2:boolean;
+begin
+x:= sin(DegToRad(spin));
+z:= cos(DegToRad(spin));
+lx:= sin(DegToRad(spin+90));
+lz:= cos(DegToRad(spin+90));
+  tempX:=positionX;
+  tempZ:=positionZ;
+  if keys[83] then begin
+	  tempX:=tempX-0.02*x;
+    tempZ:=tempZ+0.02*z;
+  end;
+  if keys[87] then begin
+    tempX:=tempX+0.02*x;
+    tempZ:=tempZ-0.02*z;
+  end;
+  if keys[65] then begin
+    tempX:=tempX-0.02*(lx);
+    tempZ:=tempZ+0.02*(lz);
+	end;
+  if keys[68] then begin
+    tempX:=tempX+0.02*(lx);
+    tempZ:=tempZ-0.02*(lz);
+	end;
+  //  Algoritmo deteccion de colisiones
+  flagX:=true;
+  flagZ:=true;
+  for j :=  -5 to 5 do
+    for k :=  -5 to 5 do
+      begin
+      aux1:= true;
+      aux2:= true;
+      if (tempX < deathzone[0,j,k]) or (tempX > deathzone[1,j,k]) then
+        aux1:=false; //positionX:=tempX;
+      if (tempX > deathzone[0,j,k]) or (tempX < deathzone[1,j,k]) then
+        if (tempZ < deathzone[2,j,k]) or (tempZ > deathzone[3,j,k]) then
+          aux2:=false;
+      if aux1 and aux2 then flagX:= false;
+      
+      aux1:= true;
+      aux2:= true;          
+      if (tempZ < deathzone[2,j,k]) or (tempZ > deathzone[3,j,k]) then
+        aux1:=false; //positionZ:=tempZ;
+      if (positionZ > deathzone[2,j,k]) or (positionZ < deathzone[3,j,k]) then
+        if (positionX < deathzone[0,j,k]) or (positionX > deathzone[1,j,k]) then
+          aux2:=false;
+      if aux1 and aux2 then flagZ:= false;
+      end;
+  if flagX then positionX:=tempX;
+  if flagZ then positionZ:=tempZ;
+  // Fin deteccion
+  if keys[40] then begin //down
+    altura:=altura+0.01;
+	end;
+  if keys[38] then begin //up
+    altura:=altura-0.01;
+	end;
+  if keys[39] then  //right
+    begin
+      spin:=spin+0.05; //Rotamos el angulo de observación de la escena...
+      if spin > 360.0 then
+        spin := spin - 360.0;
+    end;
+  if keys[37] then  //left
+    begin
+      spin:=spin-0.05; //Rotamos el angulo de observación de la escena...
+      if spin < 360.0 then
+        spin := spin + 360.0;
+    end;
+end;
+
+procedure drawCube;
+begin
+    glColor3f(1.0, 0.0, 0.0);
+    glBegin(GL_QUADS);       //cara frontal
+    glNormal3f(0,0,1);
+    glVertex3f(-1.0, -1.0,  1.0);
+    glVertex3f( 1.0, -1.0,  1.0);
+    glVertex3f( 1.0,  1.0,  1.0);
+    glVertex3f(-1.0,  1.0,  1.0);
+    glEnd();
+
+    glColor3f(0.0, 1.0, 0.0);
+    glBegin(GL_QUADS);       //cara trasera
+    glNormal3f(0,0,-1);
+    glVertex3f( 1.0, -1.0, -1.0);
+    glVertex3f(-1.0, -1.0, -1.0);
+    glVertex3f(-1.0,  1.0, -1.0);
+    glVertex3f( 1.0,  1.0, -1.0);
+    glEnd();
+
+    glColor3f(0.0, 0.0, 1.0);
+    glBegin(GL_QUADS);       //cara lateral izq
+    glNormal3f(-1,0,0);
+    glVertex3f(-1.0,-1.0, -1.0);
+    glVertex3f(-1.0,-1.0,  1.0);
+    glVertex3f(-1.0, 1.0,  1.0);
+    glVertex3f(-1.0, 1.0, -1.0);
+    glEnd();
+
+    glColor3f(1.0, 1.0, 0.0);
+    glBegin(GL_QUADS);       //cara lateral dcha
+    glNormal3f(1,0,0);
+    glVertex3f(1.0, -1.0,  1.0);
+    glVertex3f(1.0, -1.0, -1.0);
+    glVertex3f(1.0,  1.0, -1.0);
+    glVertex3f(1.0,  1.0,  1.0);
+    glEnd();
+
+    glColor3f(0.0, 1.0, 1.0);
+    glBegin(GL_QUADS);       //cara arriba
+    glNormal3f(0,1,0);
+    glVertex3f(-1.0, 1.0,  1.0);
+    glVertex3f( 1.0, 1.0,  1.0);
+    glVertex3f( 1.0, 1.0, -1.0);
+    glVertex3f(-1.0, 1.0, -1.0);
+    glEnd();
+
+    glColor3f(1.0, 0.0, 1.0);
+    glBegin(GL_QUADS);       //cara abajo
+    glNormal3f(0,-1,0);
+    glVertex3f( 1.0,-1.0, -1.0);
+    glVertex3f( 1.0,-1.0,  1.0);
+    glVertex3f(-1.0,-1.0,  1.0);
+    glVertex3f(-1.0,-1.0, -1.0);
+    glEnd();
+end;
 
 {------------------------------------------------------------------}
 {  Function to convert int to string. (No sysutils = smaller EXE)  }
@@ -40,17 +171,6 @@ var
 function IntToStr(Num : Integer) : String;  // using SysUtils increase file size by 100K
 begin
   Str(Num, result);
-end;
-
-
-{------------------------------------------------------------------}
-{  Calculate the next rotation value an assign it to spin          }
-{------------------------------------------------------------------}
-procedure SpinDisplay();
-begin
-    spin := spin + 0.1;
-    if spin > 360.0 then
-        spin := spin - 360.0;
 end;
 
 procedure Normalize(out v : array of GLFloat);
@@ -77,6 +197,25 @@ begin
 end;
 
 {------------------------------------------------------------------}
+{  Deteccion de Colisiones                                         }
+{------------------------------------------------------------------}
+procedure initialize;
+var
+  i,j,k: Integer;
+begin
+  spin:=0;
+  positionX:=0;
+  positionZ:=2.3;
+  for j := -5 to 5 do
+    for k := -5 to 5 do
+      for i := 0 to 1 do
+      begin
+        deathzone[i,j,k] :=   (i-0.5)*4.4+j*8;
+        deathzone[i+2,j,k] := (i-0.5)*4.4+k*8;
+      end;
+end;
+
+{------------------------------------------------------------------}
 {  Function to draw the actual scene                               }
 {------------------------------------------------------------------}
 procedure glDraw();
@@ -88,17 +227,11 @@ begin
   glClearColor(0.0, 0.0, 0.0, 1.0); // Black Background
   glClear (GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT);    // Clear the colour and depth buffer
   glLoadIdentity();                 // Load a "clean" model matrix on the stack
+  Display;
+	glRotatef(spin,0,1,0);
+  glTranslatef(-positionX,altura,-positionZ);
+  drawCube;
 
-  glTranslatef(0.0,0.0,-10.0);
-  SpinDisplay();
-  glRotatef(spin,0.0,-1.0,-1.0);      // Rotate the Icosahedron so that we can visualise it properly
-
-  glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,@azul);
-  glBegin(GL_TRIANGLES);
-        glVertex3f(0,0,0);
-        glVertex3f(1,0,0);
-        glVertex3f(0,1,0);
-  glEnd();
   // Flush the OpenGL Buffer
   glFlush();                        // ( Force the buffer to draw or send a network packet of commands in a networked system)
 
@@ -123,7 +256,7 @@ begin
   glLightfv(GL_LIGHT0, GL_SPECULAR,@light_specular);
   glLightfv(GL_LIGHT0, GL_POSITION,@light_position);
 
-  glEnable(GL_LIGHTING);
+  //glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
 
 
@@ -169,6 +302,7 @@ begin
     WM_CREATE:
       begin
         // Insert stuff you want executed when the program starts
+        initialize;
       end;
     WM_CLOSE:
       begin
